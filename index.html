@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Little Boy - Hiroshima 1945</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <style>
+        /* ========================================
+           RESET & BASE STYLES
+        ======================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: auto;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            overflow-x: hidden;
+            position: relative;
+            background: #000;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* ========================================
+           SCROLLING BACKGROUND (10.000px PNG)
+           WICHTIG: Dies ist der EINZIGE Hintergrund!
+        ======================================== */
+        .sky-background {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 1920px;
+            height: 10000px;
+            background-image: url('assets/sky_to_city.png');
+            background-size: 1920px 10000px;
+            background-position: top center;
+            background-repeat: no-repeat;
+            z-index: 1;
+        }
+
+        /* ========================================
+           SCROLL CONTAINER (15.000vh für langsames Scrollen)
+        ======================================== */
+        .scroll-container {
+            height: 15000vh;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* ========================================
+           INTRO SECTION
+        ======================================== */
+        .intro {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+            text-align: center;
+            padding: 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+
+        .intro h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .intro p {
+            font-size: 1.3rem;
+            opacity: 0.8;
+            max-width: 600px;
+        }
+
+        /* ========================================
+           FLUGZEUG (PNG)
+        ======================================== */
+        .plane-container {
+            position: fixed;
+            top: 15vh;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+        }
+
+        .plane {
+            width: 200px;
+            height: auto;
+        }
+
+        /* ========================================
+           BOMBE (PNG)
+        ======================================== */
+        .bomb-container {
+            position: fixed;
+            top: 20vh;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 999;
+        }
+
+        .bomb {
+            width: 50px;
+            height: auto;
+        }
+
+        /* ========================================
+           BOMB FACTS (ZOOM PHASE)
+        ======================================== */
+        .bomb-facts {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 998;
+            opacity: 0;
+            pointer-events: none;
+            width: 900px;
+            height: 600px;
+        }
+
+        .fact-item {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.85);
+            color: #FFD700;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            white-space: nowrap;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+            border: 2px solid #FFD700;
+        }
+
+        .fact-item:nth-child(1) {
+            top: 50px;
+            left: -200px;
+        }
+
+        .fact-item:nth-child(2) {
+            top: 50px;
+            right: -200px;
+        }
+
+        .fact-item:nth-child(3) {
+            bottom: 50px;
+            left: -200px;
+        }
+
+        .fact-item:nth-child(4) {
+            bottom: 50px;
+            right: -200px;
+        }
+
+        /* ========================================
+           STICKY NOTES (PNG)
+        ======================================== */
+        .sticky-note {
+            position: fixed;
+            top: 50%;
+            width: 300px;
+            opacity: 0;
+            z-index: 500;
+            pointer-events: none;
+            transform: translateY(-50%);
+        }
+
+        .sticky-note img {
+            width: 100%;
+            height: auto;
+            filter: drop-shadow(0 8px 16px rgba(0,0,0,0.4));
+        }
+
+        .sticky-note.left {
+            left: 8%;
+        }
+
+        .sticky-note.right {
+            right: 8%;
+        }
+
+        /* ========================================
+           EXPLOSION SYSTEM
+        ======================================== */
+        .explosion-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 10000;
+        }
+
+        .explosion-flash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #ffffff;
+            opacity: 0;
+        }
+
+        .explosion-fireball {
+            position: absolute;
+            bottom: 15%;
+            left: 50%;
+            transform: translate(-50%, 50%);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: radial-gradient(circle at center, 
+                #ffffff 0%, 
+                #ffff00 15%, 
+                #ff9900 30%, 
+                #ff3300 50%, 
+                #cc0000 70%, 
+                rgba(139, 0, 0, 0.8) 85%, 
+                transparent 100%);
+            opacity: 0;
+            filter: blur(2px);
+        }
+
+        .explosion-shockwave {
+            position: absolute;
+            bottom: 15%;
+            left: 50%;
+            transform: translate(-50%, 50%);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 4px solid rgba(255, 255, 255, 0.9);
+            opacity: 0;
+        }
+
+        .explosion-smoke {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 200px;
+            background: radial-gradient(ellipse at bottom, 
+                rgba(50, 50, 50, 0.9) 0%, 
+                rgba(80, 80, 80, 0.7) 30%, 
+                rgba(100, 100, 100, 0.4) 60%, 
+                transparent 100%);
+            opacity: 0;
+            filter: blur(15px);
+        }
+
+        .explosion-glow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 85%, 
+                rgba(255, 100, 0, 0.6) 0%, 
+                rgba(255, 50, 0, 0.4) 40%, 
+                transparent 70%);
+            opacity: 0;
+        }
+
+        /* ========================================
+           AFTERMATH BACKGROUND
+        ======================================== */
+        .bg-after {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-image: url('assets/bg_after.png');
+            background-size: cover;
+            background-position: center;
+            z-index: 10002;
+            opacity: 0;
+            pointer-events: none;
+            background-color: #1a1a1a;
+        }
+
+        /* ========================================
+           AFTERMATH TEXT & STATS
+        ======================================== */
+        .aftermath-text {
+            position: fixed;
+            top: 25%;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 2.8rem;
+            font-weight: bold;
+            text-align: center;
+            text-shadow: 3px 3px 10px rgba(0, 0, 0, 0.9);
+            z-index: 10003;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .aftermath-stats {
+            position: fixed;
+            bottom: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.95);
+            text-align: center;
+            font-size: 1.5rem;
+            line-height: 2.2;
+            z-index: 10003;
+            opacity: 0;
+            pointer-events: none;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.9);
+        }
+
+        /* ========================================
+           INFO PANEL
+        ======================================== */
+        .info-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.75);
+            color: white;
+            padding: 18px 24px;
+            border-radius: 10px;
+            font-size: 15px;
+            z-index: 20000;
+            max-width: 280px;
+        }
+
+        .altitude {
+            font-size: 26px;
+            font-weight: bold;
+            color: #ff6b00;
+        }
+
+        /* Responsive Anpassung */
+        @media (max-width: 1920px) {
+            .sky-background {
+                width: 100vw;
+                background-size: cover;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ========================================
+         SCROLLING BACKGROUND (10.000px PNG)
+         KRITISCH: Einziger Hintergrund, immer sichtbar!
+    ======================================== -->
+    <div class="sky-background"></div>
+
+    <!-- ========================================
+         AFTERMATH BACKGROUND (wird später eingeblendet)
+    ======================================== -->
+    <div class="bg-after"></div>
+
+    <!-- ========================================
+         INTRO SECTION
+    ======================================== -->
+    <div class="intro">
+        <h1>Little Boy</h1>
+        <p>6. August 1945, 08:15 Uhr<br>Hiroshima, Japan</p>
+        <p style="margin-top: 20px; font-size: 1rem;">Scrolle langsam nach unten, um die Ereignisse zu verfolgen</p>
+    </div>
+
+    <!-- ========================================
+         SCROLL CONTAINER (15.000vh)
+    ======================================== -->
+    <div class="scroll-container"></div>
+
+    <!-- ========================================
+         FLUGZEUG (PNG)
+    ======================================== -->
+    <div class="plane-container">
+        <img src="assets/plane.png" alt="Enola Gay" class="plane">
+    </div>
+
+    <!-- ========================================
+         BOMBE (PNG)
+    ======================================== -->
+    <div class="bomb-container">
+        <img src="assets/bomb.png" alt="Little Boy" class="bomb">
+    </div>
+
+    <!-- ========================================
+         BOMB FACTS (ZOOM PHASE)
+    ======================================== -->
+    <div class="bomb-facts">
+        <div class="fact-item">Gewicht: 4.400 kg</div>
+        <div class="fact-item">Länge: 3,0 m</div>
+        <div class="fact-item">Sprengkraft: 15 kt</div>
+        <div class="fact-item">Codename: Little Boy</div>
+    </div>
+
+    <!-- ========================================
+         STICKY NOTES (PNG)
+    ======================================== -->
+    <div class="sticky-note left" data-note="1">
+        <img src="assets/note1.png" alt="Note 1">
+    </div>
+
+    <div class="sticky-note right" data-note="2">
+        <img src="assets/note2.png" alt="Note 2">
+    </div>
+
+    <div class="sticky-note left" data-note="3">
+        <img src="assets/note3.png" alt="Note 3">
+    </div>
+
+    <div class="sticky-note right" data-note="4">
+        <img src="assets/note4.png" alt="Note 4">
+    </div>
+
+    <!-- ========================================
+         EXPLOSION SYSTEM
+    ======================================== -->
+    <div class="explosion-container">
+        <div class="explosion-flash"></div>
+        <div class="explosion-fireball"></div>
+        <div class="explosion-shockwave"></div>
+        <div class="explosion-smoke"></div>
+        <div class="explosion-glow"></div>
+    </div>
+
+    <!-- ========================================
+         AFTERMATH TEXT & STATS
+    ======================================== -->
+    <div class="aftermath-text">Nachher: Hiroshima, 6. August 1945</div>
+    <div class="aftermath-stats">
+        ~70.000 Tote sofort<br>
+        ~140.000 Tote bis Ende 1945<br>
+        80% der Stadt zerstört<br>
+        Strahlenopfer bis heute
+    </div>
+
+    <!-- ========================================
+         INFO PANEL
+    ======================================== -->
+    <div class="info-panel">
+        <div><strong>Datum:</strong> 6. August 1945</div>
+        <div><strong>Zeit:</strong> 08:15 Uhr</div>
+        <div><strong>Höhe:</strong> <span class="altitude" id="altitude">9450</span>m</div>
+    </div>
+
+    <!-- ========================================
+         JAVASCRIPT / GSAP ANIMATIONS
+    ======================================== -->
+    <script>
+        gsap.registerPlugin(ScrollTrigger);
+
+        // ========================================
+        // 🎚️ HINTERGRUND-GESCHWINDIGKEIT EINSTELLEN
+        // ========================================
+        // Je HÖHER der Wert, desto LANGSAMER bewegt sich das Hintergrund-PNG
+        // 
+        // Empfohlene Werte:
+        // 1.0 = Standard-Geschwindigkeit
+        // 1.5 = 50% langsamer (empfohlen für episches Gefühl)
+        // 2.0 = Halb so schnell
+        // 3.0 = Sehr langsam, dramatisch
+        // 0.5 = Doppelt so schnell
+        // 
+        const BG_SPEED_MULTIPLIER = 150.0;  // ← HIER ÄNDERN! 🎯
+
+        // ========================================
+        // KONSTANTEN
+        // ========================================
+        const TOTAL_SCROLL_VH = 10000;  // Gesamt-Scrollhöhe
+        const BG_HEIGHT_PX = 10000;     // PNG-Höhe
+        const START_ALTITUDE = 9450;    // Abwurfhöhe
+        const EXPLOSION_ALTITUDE = 500; // Detonationshöhe
+
+        // ========================================
+        // PHASE-DEFINITIONEN (in vh)
+        // Extrem großzügig für langsames Scrollen
+        // ========================================
+        const PHASES = {
+            // Intro (0-400vh)
+            intro: { start: 0, end: 400 },
+            
+            // Flugzeug fliegt weg (300-1000vh)
+            planeExit: { start: 300, end: 1000 },
+            
+            // Bombe beginnt zu fallen (800vh)
+            bombAppear: { start: 800 },
+            
+            // Bombe fällt während Hintergrund scrollt (800-12000vh)
+            bombFall: { start: 800, end: 12000 },
+            
+            // Zoom-In auf Bombe (2000-3500vh)
+            zoomIn: { start: 2000, end: 3500 },
+            
+            // Zoom-Out zurück (4000-5200vh)
+            zoomOut: { start: 4000, end: 5200 },
+            
+            // Sticky Notes (jeweils ~800vh pro Note)
+            note1: { start: 5500, end: 6300 },
+            note2: { start: 7000, end: 7800 },
+            note3: { start: 8500, end: 9300 },
+            note4: { start: 10000, end: 10800 },
+            
+            // Explosion (wenn Stadt erreicht: 12000-13500vh)
+            explosion: { start: 12000, end: 13500 },
+            
+            // Aftermath (13800-14800vh)
+            aftermath: { start: 13800, end: 14800 }
+        };
+
+        // ========================================
+        // KRITISCH: HINTERGRUND SCROLLT LINEAR DURCH
+        // Von oben (Himmel) nach unten (Stadt)
+        // Mit BG_SPEED_MULTIPLIER steuerbar! 🎚️
+        // ========================================
+        const bgScrollLength = PHASES.explosion.start * BG_SPEED_MULTIPLIER;
+        
+        gsap.to('.sky-background', {
+            y: -(BG_HEIGHT_PX - window.innerHeight),
+            ease: 'none',
+            scrollTrigger: {
+                trigger: '.scroll-container',
+                start: 'top top',
+                end: `top+=${bgScrollLength}vh top`,  // ← Nutzt Multiplier!
+                scrub: 2,
+                invalidateOnRefresh: true
+            }
+        });
+        
+        // Debug-Info in Konsole
+        console.log(`🎚️ Hintergrund-Geschwindigkeit: ${BG_SPEED_MULTIPLIER}x`);
+        console.log(`📏 Hintergrund scrollt über: ${bgScrollLength}vh`);
+        console.log(`💥 Explosion passiert bei: ${PHASES.explosion.start}vh`);
+
+        // ========================================
+        // PHASE 1: INTRO AUSBLENDEN
+        // ========================================
+        gsap.to('.intro', {
+            opacity: 0,
+            ease: 'power2.inOut',
+            scrollTrigger: {
+                trigger: '.scroll-container',
+                start: `top+=${PHASES.intro.start}vh top`,
+                end: `top+=${PHASES.intro.end}vh top`,
+                scrub: 2
+            }
+        });
+
+        // ========================================
+        // PHASE 2: FLUGZEUG FLIEGT NACH LINKS WEG
+        // ========================================
+        gsap.to('.plane-container', {
+            x: -window.innerWidth - 300,
+            ease: 'power1.in',
+            scrollTrigger: {
+                trigger: '.scroll-container',
+                start: `top+=${PHASES.planeExit.start}vh top`,
+                end: `top+=${PHASES.planeExit.end}vh top`,
+                scrub: 2
+            }
+        });
+
+        // ========================================
+        // PHASE 3: BOMBE FÄLLT (MIT HÖHENANZEIGE)
+        // ========================================
+        gsap.to('.bomb-container', {
+            y: window.innerHeight * 0.7,
+            ease: 'none',
+            scrollTrigger: {
+                trigger: '.scroll-container',
+                start: `top+=${PHASES.bombFall.start}vh top`,
+                end: `top+=${PHASES.bombFall.end}vh top`,
+                scrub: 2,
+                onUpdate: (self) => {
+                    const progress = self.progress;
+                    const altitude = Math.round(START_ALTITUDE - (progress * (START_ALTITUDE - EXPLOSION_ALTITUDE)));
+                    document.getElementById('altitude').textContent = Math.max(EXPLOSION_ALTITUDE, altitude);
+                }
+            }
+        });
+
+        // ========================================
+        // PHASE 4: ZOOM IN AUF BOMBE
+        // ========================================
+        const zoomInTL = gsap.timeline({
+            scrollTrigger: {
+                trigger: '.scroll-container',
+                start: `top+=${PHASES.zoomIn.start}vh top`,
+                end: `top+=${PHASES.zoomIn.end}vh top`,
+                scrub: 2
+            }
+        });
+
+        zoomInTL
+            .to('.bomb-container', {
+                scale: 7,
+                ease: 'power2.inOut',
+                duration: 1
+            })
+            .to('.bomb-facts', {
+                opacity: 1,
+                ease: 'power2.inOut',
+                duration: 0.5
+            }, '-=0.4');
+
+        // Facts Floating Animation (kontinuierlich)
+        gsap.to('.fact-item', {
+            y: -12,
+            duration: 2.5,
+            ease: 'sine.inOut',
+            stagger: 0.25,
+            repeat: -1,
+            yoyo: true
+        });
+
+        // ========================================
+        // PHASE 5: ZOOM OUT AUF ORIGINALGRÖSSE
+        // ========================================
+        const zoomOutTL = gsap.timeline({
+            scrollTrigger: {
+                trigger: '.scroll-container',
+                start: `top+=${PHASES.zoomOut.start}vh top`,
+                end: `top+=${PHASES.zoomOut.end}vh top`,
+                scrub: 2
+            }
+        });
+
+        zoomOutTL
+            .to('.bomb-facts', {
+                opacity: 0,
+                ease: 'power2.inOut',
+                duration: 0.4
+            })
+            .to('.bomb-container', {
+                scale: 1,
+                ease: 'power2.inOut',
+                duration: 1
+            }, '-=0.2');
+
+        // ========================================
+        // PHASE 6: STICKY NOTES
+        // Jede Note: Rein → Sichtbar → Raus
+        // ========================================
+        function createNoteTimeline(noteNum, phase) {
+            const note = document.querySelector(`.sticky-note[data-note="${noteNum}"]`);
+            const isLeft = note.classList.contains('left');
+            
+            const noteTL = gsap.timeline({
+                scrollTrigger: {
+                    trigger: '.scroll-container',
+                    start: `top+=${phase.start}vh top`,
+                    end: `top+=${phase.end}vh top`,
+                    scrub: 2
+                }
+            });
+
+            const slideDistance = 400;
+            const rotationIn = isLeft ? -10 : 10;
+            const rotationStable = isLeft ? -4 : 4;
+
+            noteTL
+                // REIN (0 → 0.35)
+                .fromTo(note,
+                    {
+                        opacity: 0,
+                        x: isLeft ? -slideDistance : slideDistance,
+                        rotation: rotationIn,
+                        scale: 0.8
+                    },
+                    {
+                        opacity: 1,
+                        x: 0,
+                        rotation: rotationStable,
+                        scale: 1,
+                        ease: 'power2.out',
+                        duration: 0.35
+                    }
+                )
+                // SICHTBAR (0.35 → 0.65)
+                .to(note, {
+                    duration: 0.3
+                })
+                // RAUS (0.65 → 1.0)
+                .to(note, {
+                    opacity: 0,
+                    x: isLeft ? -slideDistance : slideDistance,
+                    rotation: rotationIn,
+                    scale: 0.8,
+                    ease: 'power2.in',
+                    duration: 0.35
+                });
+        }
+
+        // Alle Notes erstellen
+        createNoteTimeline(1, PHASES.note1);
+        createNoteTimeline(2, PHASES.note2);
+        createNoteTimeline(3, PHASES.note3);
+        createNoteTimeline(4, PHASES.note4);
+
+        // ========================================
+        // PHASE 7: EXPLOSION
+        // Wird ausgelöst, wenn Stadt erreicht ist
+        // ========================================
+        const explosionTL = gsap.timeline({
+            scrollTrigger: {
+                trigger: '.scroll-container',
+                start: `top+=${PHASES.explosion.start}vh top`,
+                end: `top+=${PHASES.explosion.end}vh top`,
+                scrub: 2
+            }
+        });
+
+        explosionTL
+            // Bombe verschwindet (0 → 0.04)
+            .to('.bomb-container', {
+                opacity: 0,
+                scale: 0.2,
+                duration: 0.04,
+                ease: 'power3.in'
+            })
+            // Flash (0.04 → 0.12)
+            .to('.explosion-flash', {
+                opacity: 1,
+                duration: 0.04
+            }, '+=0.01')
+            .to('.explosion-flash', {
+                opacity: 0,
+                duration: 0.04
+            }, '+=0.04')
+            // Feuerball expandiert (0.12 → 0.5)
+            .to('.explosion-fireball', {
+                opacity: 1,
+                width: '1000px',
+                height: '1000px',
+                duration: 0.38,
+                ease: 'power2.out'
+            }, '-=0.03')
+            // Shockwave (0.18 → 0.65)
+            .to('.explosion-shockwave', {
+                opacity: 0.95,
+                width: '1400px',
+                height: '1400px',
+                duration: 0.25,
+                ease: 'power2.out'
+            }, '-=0.32')
+            .to('.explosion-shockwave', {
+                opacity: 0,
+                width: '2800px',
+                height: '2800px',
+                duration: 0.22,
+                ease: 'power2.in'
+            })
+            // Rauch steigt auf (0.35 → 0.9)
+            .to('.explosion-smoke', {
+                opacity: 1,
+                width: '700px',
+                height: '1200px',
+                duration: 0.55,
+                ease: 'power1.out'
+            }, '-=0.4')
+            // Glow (0.28 → 0.8)
+            .to('.explosion-glow', {
+                opacity: 1,
+                duration: 0.3,
+                ease: 'power2.inOut'
+            }, '-=0.65')
+            .to('.explosion-glow', {
+                opacity: 0.65,
+                duration: 0.22
+            });
+
+        // ========================================
+        // PHASE 8: AFTERMATH
+        // Wechsel zur zerstörten Stadt
+        // ========================================
+        const aftermathTL = gsap.timeline({
+            scrollTrigger: {
+                trigger: '.scroll-container',
+                start: `top+=${PHASES.aftermath.start}vh top`,
+                end: `top+=${PHASES.aftermath.end}vh top`,
+                scrub: 2
+            }
+        });
+
+        aftermathTL
+            // Explosion-Elemente ausblenden (0 → 0.25)
+            .to(['.explosion-fireball', '.explosion-smoke', '.explosion-glow'], {
+                opacity: 0,
+                duration: 0.25,
+                ease: 'power2.inOut'
+            })
+            // Hintergrund-Wechsel (0.15 → 0.55)
+            .to('.sky-background', {
+                opacity: 0,
+                duration: 0.2,
+                ease: 'power2.inOut'
+            }, '-=0.1')
+            .to('.bg-after', {
+                opacity: 1,
+                duration: 0.4,
+                ease: 'power2.inOut'
+            }, '-=0.2')
+            // Text einblenden (0.45 → 0.75)
+            .to('.aftermath-text', {
+                opacity: 1,
+                y: -30,
+                duration: 0.3,
+                ease: 'power2.out'
+            }, '-=0.3')
+            // Stats einblenden (0.65 → 1.0)
+            .to('.aftermath-stats', {
+                opacity: 1,
+                y: -30,
+                duration: 0.35,
+                ease: 'power2.out'
+            }, '-=0.1');
+
+        // ========================================
+        // INFO PANEL AUSBLENDEN (VOR EXPLOSION)
+        // ========================================
+        gsap.to('.info-panel', {
+            opacity: 0,
+            ease: 'power2.inOut',
+            scrollTrigger: {
+                trigger: '.scroll-container',
+                start: `top+=${PHASES.explosion.start - 500}vh top`,
+                end: `top+=${PHASES.explosion.start - 200}vh top`,
+                scrub: 2
+            }
+        });
+
+        // ========================================
+        // PERFORMANCE OPTIMIZATION
+        // ========================================
+        ScrollTrigger.config({
+            limitCallbacks: true,
+            syncInterval: 120
+        });
+    </script>
+</body>
+</html>
